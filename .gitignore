@@ -42,3 +42,8 @@ yarn-error.*
 
 # Local Netlify folder
 .netlify
+
+# Partial / incomplete downloads
+*.part
+*.crdownload
+*.tmp
