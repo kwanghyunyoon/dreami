@@ -1,0 +1,82 @@
+const IS_WEB = process.env.EXPO_PLATFORM === 'web' || process.env.NETLIFY === 'true';
+
+// Native-only plugins — skip entirely during web/Netlify builds
+const nativePlugins = IS_WEB ? [] : [
+  [
+    'expo-notifications',
+    {
+      icon: './assets/icon.png',
+      color: '#6C63FF',
+      sounds: [],
+    },
+  ],
+  'expo-av',
+  'expo-secure-store',
+];
+
+export default {
+  expo: {
+    name: 'Dreami',
+    slug: 'dreami',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'dark',
+    newArchEnabled: true,
+    splash: {
+      image: './assets/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff',
+    },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.dreami.app',
+      infoPlist: {
+        UIBackgroundModes: ['audio'],
+      },
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#ffffff',
+      },
+      edgeToEdgeEnabled: true,
+      package: 'com.dreami.app',
+      permissions: [
+        'android.permission.RECORD_AUDIO',
+        'android.permission.MODIFY_AUDIO_SETTINGS',
+      ],
+    },
+    web: {
+      favicon: './assets/favicon.png',
+      bundler: 'metro',
+      output: 'single',
+      name: 'Dreami – Sleep Better',
+      shortName: 'Dreami',
+      description:
+        'Your personal sleep companion — ambient sounds, smart bedtime, and sleep tracking. Available in English, Korean, Spanish, and Hindi.',
+      themeColor: '#7C74FF',
+      backgroundColor: '#0D0C1A',
+      lang: 'en',
+      scope: '/',
+      startUrl: '/',
+      display: 'standalone',
+      orientation: 'portrait',
+      categories: ['health', 'lifestyle'],
+      preferRelatedApplications: false,
+    },
+    plugins: nativePlugins,
+    extra: {
+      eas: {
+        projectId: '19a1ecf8-4188-4777-8533-50afe92cab8b',
+      },
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
+    updates: {
+      url: 'https://u.expo.dev/19a1ecf8-4188-4777-8533-50afe92cab8b',
+    },
+    owner: 'yoonk478',
+  },
+};
