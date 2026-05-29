@@ -237,6 +237,9 @@ export default function SoundsScreen() {
                 onPress={() => handleToggle(sound)}
                 activeOpacity={sound.locked ? 1 : undefined}
                 disabled={sound.locked || (loadingId !== null && loadingId !== sound.id)}
+                accessibilityRole="button"
+                accessibilityLabel={soundI18n.label}
+                accessibilityState={{ selected: active, disabled: !!sound.locked }}
               >
                 {/* Icon badge */}
                 <View style={[styles.iconWrap, { backgroundColor: active ? sound.color : sound.bg }]}>

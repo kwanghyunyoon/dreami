@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, TextInput,
+  ScrollView, TextInput, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as storage from '../utils/storage';
@@ -305,9 +305,8 @@ export default function LogScreen() {
     ? (log.reduce((s, e) => s + e.duration, 0) / log.length / 3600000).toFixed(1)
     : null;
 
-  return (
-    <View style={styles.screenRoot}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  const listHeader = (
+    <>
       <Text style={styles.title}>{t.log.title}</Text>
       <Text style={styles.subtitle}>{t.log.subtitle}</Text>
 
@@ -354,60 +353,72 @@ export default function LogScreen() {
         <MonthCalendar log={log} goalHours={sleepGoal} locale={t.locale} />
       )}
 
-      {/* Log Entries */}
       <Text style={styles.sectionTitle}>{t.log.history}</Text>
-      {log.length === 0 ? (
+    </>
+  );
+
+  const renderEntry = useCallback(({ item: entry, index: i }) => {
+    const score = getSleepScore(entry.duration, t, sleepGoal);
+    return (
+      <Card style={styles.entryCard}>
+        <View style={styles.entryHeader}>
+          <Text style={styles.entryDate}>{formatDate(entry.start, t.locale)}</Text>
+          <View style={[styles.scorePill, { backgroundColor: score.color + '1A' }]}>
+            <Ionicons name={score.icon} size={12} color={score.color} />
+            <Text style={[styles.scoreText, { color: score.color }]}> {score.score}</Text>
+          </View>
+        </View>
+        <View style={styles.entryRow}>
+          <View style={styles.entryItem}>
+            <Text style={styles.entryValue}>{formatDuration(entry.duration)}</Text>
+            <Text style={styles.entryLabel}>{t.log.duration}</Text>
+          </View>
+          <View style={styles.entryItem}>
+            <Text style={styles.entryValue}>{formatTime(entry.start)}</Text>
+            <Text style={styles.entryLabel}>{t.log.bedtime}</Text>
+          </View>
+          <View style={styles.entryItem}>
+            <Text style={styles.entryValue}>{formatTime(entry.end)}</Text>
+            <Text style={styles.entryLabel}>{t.log.wakeUp}</Text>
+          </View>
+        </View>
+        <View style={styles.qualityRow}>
+          <Text style={styles.qualityLabel}>{t.log.quality}</Text>
+          <QualityStars value={entry.quality || 0} onChange={(q) => updateQuality(i, q)} />
+        </View>
+        <View style={styles.notesRow}>
+          <Text style={styles.notesLabel}>{t.log.notes}</Text>
+          <TextInput
+            style={styles.notesInput}
+            value={entry.notes || ''}
+            onChangeText={(text) => updateNotes(i, text)}
+            placeholder={t.log.notesPlaceholder}
+            placeholderTextColor={colors.subtext}
+            multiline
+            numberOfLines={2}
+          />
+        </View>
+      </Card>
+    );
+  }, [t, sleepGoal, updateQuality, updateNotes]);
+
+  return (
+    <View style={styles.screenRoot}>
+    <FlatList
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      data={log}
+      keyExtractor={(_, i) => String(i)}
+      renderItem={renderEntry}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={
         <Card variant="tinted" style={styles.emptyCard}>
           <Ionicons name="moon-outline" size={32} color={colors.primaryMid} />
           <Text style={styles.emptyText}>{t.log.empty}</Text>
         </Card>
-      ) : (
-        log.map((entry, i) => {
-          const score = getSleepScore(entry.duration, t, sleepGoal);
-          return (
-            <Card key={i} style={styles.entryCard}>
-              <View style={styles.entryHeader}>
-                <Text style={styles.entryDate}>{formatDate(entry.start, t.locale)}</Text>
-                <View style={[styles.scorePill, { backgroundColor: score.color + '1A' }]}>
-                  <Ionicons name={score.icon} size={12} color={score.color} />
-                  <Text style={[styles.scoreText, { color: score.color }]}> {score.score}</Text>
-                </View>
-              </View>
-              <View style={styles.entryRow}>
-                <View style={styles.entryItem}>
-                  <Text style={styles.entryValue}>{formatDuration(entry.duration)}</Text>
-                  <Text style={styles.entryLabel}>{t.log.duration}</Text>
-                </View>
-                <View style={styles.entryItem}>
-                  <Text style={styles.entryValue}>{formatTime(entry.start)}</Text>
-                  <Text style={styles.entryLabel}>{t.log.bedtime}</Text>
-                </View>
-                <View style={styles.entryItem}>
-                  <Text style={styles.entryValue}>{formatTime(entry.end)}</Text>
-                  <Text style={styles.entryLabel}>{t.log.wakeUp}</Text>
-                </View>
-              </View>
-              <View style={styles.qualityRow}>
-                <Text style={styles.qualityLabel}>{t.log.quality}</Text>
-                <QualityStars value={entry.quality || 0} onChange={(q) => updateQuality(i, q)} />
-              </View>
-              <View style={styles.notesRow}>
-                <Text style={styles.notesLabel}>{t.log.notes}</Text>
-                <TextInput
-                  style={styles.notesInput}
-                  value={entry.notes || ''}
-                  onChangeText={(text) => updateNotes(i, text)}
-                  placeholder={t.log.notesPlaceholder}
-                  placeholderTextColor={colors.subtext}
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-            </Card>
-          );
-        })
-      )}
-    </ScrollView>
+      }
+    />
     <CrisisModal
       visible={crisisVisible}
       onClose={() => setCrisisVisible(false)}

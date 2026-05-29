@@ -259,6 +259,9 @@ export default function HomeScreen({ navigation }) {
           style={[styles.sleepButton, isSleeping && styles.sleepButtonActive]}
           onPress={handleToggle}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={isSleeping ? t.home.tapToWake : t.home.startSleep}
+          accessibilityState={{ selected: isSleeping }}
         >
           <Ionicons name={isSleeping ? 'moon' : 'moon-outline'} size={40} color={isSleeping ? colors.white : colors.primary} />
           <Text style={[styles.sleepButtonLabel, isSleeping && styles.sleepButtonLabelActive]}>
@@ -419,7 +422,7 @@ export default function HomeScreen({ navigation }) {
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>{t.home.windDown}</Text>
       <View style={styles.quickRow}>
-        <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('Sounds')} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('Sounds')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t.home.sounds}>
           <View style={[styles.quickIcon, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="musical-notes" size={22} color={colors.primary} />
           </View>
@@ -427,7 +430,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.quickSub}>{t.home.soundsSub}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('Alarm')} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('Alarm')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t.home.alarm}>
           <View style={[styles.quickIcon, { backgroundColor: '#2C1F06' }]}>
             <Ionicons name="alarm" size={22} color={colors.warning} />
           </View>

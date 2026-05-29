@@ -31,8 +31,12 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.dreami.app',
+      privacyManifests: {
+        NSPrivacyAccessedAPITypes: [],
+      },
       infoPlist: {
         UIBackgroundModes: ['audio'],
+        // Age rating declared in App Store Connect during submission (4+)
       },
     },
     android: {
@@ -70,6 +74,8 @@ export default {
       eas: {
         projectId: '19a1ecf8-4188-4777-8533-50afe92cab8b',
       },
+      // Update this URL after first Netlify deploy
+      privacyPolicyUrl: 'https://dreami.netlify.app/privacy',
     },
     runtimeVersion: {
       policy: 'appVersion',

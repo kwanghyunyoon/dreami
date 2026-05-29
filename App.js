@@ -15,6 +15,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import LanguagePicker from './src/components/LanguagePicker';
 import GentleAlarmModal from './src/components/GentleAlarmModal';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { colors, shadow } from './src/theme';
 import { LanguageProvider, useLanguage } from './src/LanguageContext';
 import { HelpProvider, useHelp } from './src/context/HelpContext';
@@ -238,13 +239,15 @@ function AppWithOnboarding() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <LanguageProvider>
-        <HelpProvider>
-          <AppWithOnboarding />
-        </HelpProvider>
-      </LanguageProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <LanguageProvider>
+          <HelpProvider>
+            <AppWithOnboarding />
+          </HelpProvider>
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
