@@ -22,7 +22,7 @@ import * as storage from '../utils/storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 5;
 
-const FEEDBACK_WORKER = 'https://app-feedback.yoonk478.workers.dev';
+const FEEDBACK_WORKER = 'https://app-feedback.kwangyoon.workers.dev';
 const ISSUE_TYPES = ['Bug', 'Suggestion', 'Other'];
 
 function FeedbackModal({ visible, onClose }) {
