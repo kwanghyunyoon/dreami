@@ -1,6 +1,6 @@
-const IS_WEB = process.env.EXPO_PLATFORM === 'web' || process.env.NETLIFY === 'true';
+const IS_WEB = process.env.EXPO_PLATFORM === 'web' || process.env.EXPO_IS_WEB === 'true';
 
-// Native-only plugins — skip entirely during web/Netlify builds
+// Native-only plugins — skip entirely during web builds
 const nativePlugins = IS_WEB ? [] : [
   [
     'expo-notifications',
@@ -69,12 +69,15 @@ export default {
       categories: ['health', 'lifestyle'],
       preferRelatedApplications: false,
     },
+    experiments: {
+      baseUrl: process.env.DEPLOY_BASE_URL || '',
+    },
     plugins: nativePlugins,
     extra: {
       eas: {
         projectId: '19a1ecf8-4188-4777-8533-50afe92cab8b',
       },
-      privacyPolicyUrl: 'https://dreamiapp1.netlify.app/privacy',
+      privacyPolicyUrl: 'https://kwanghyunyoon.github.io/dreami/privacy.html',
     },
     runtimeVersion: {
       policy: 'appVersion',
