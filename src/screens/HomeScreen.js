@@ -11,7 +11,7 @@ import * as Notifications from 'expo-notifications';
 import { colors, typography, spacing, radius, shadow } from '../theme';
 import Card from '../components/Card';
 import { useLanguage } from '../LanguageContext';
-import { useHelp } from '../context/HelpContext';
+
 import BreathingModal from '../components/BreathingModal';
 import WakeQualityModal from '../components/WakeQualityModal';
 import InfoTooltip from '../components/InfoTooltip';
@@ -59,7 +59,6 @@ function formatTime(dateStr) {
 
 export default function HomeScreen({ navigation }) {
   const { t } = useLanguage();
-  const { setShowHelp } = useHelp();
   const [isSleeping, setIsSleeping] = useState(false);
   const [sleepStart, setSleepStart] = useState(null);
   const [elapsed, setElapsed] = useState(0);
@@ -452,15 +451,6 @@ export default function HomeScreen({ navigation }) {
         </Card>
       </TouchableOpacity>
 
-      {/* Help Button */}
-      <TouchableOpacity
-        style={styles.helpBtn}
-        onPress={() => setShowHelp(true)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.helpBtnText}>{t.home.helpBtn} ❓</Text>
-      </TouchableOpacity>
-
     </ScrollView>
 
     <BreathingModal
@@ -543,18 +533,6 @@ const styles = StyleSheet.create({
   stepEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
   stepLabel: { ...typography.body, fontWeight: '600' },
   stepSub: { ...typography.caption, marginTop: 2, lineHeight: 18 },
-
-  // Help button
-  helpBtn: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  helpBtnText: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.primary,
-  },
 
   // Goal progress
   goalWrap: { marginTop: spacing.md, gap: 6 },
