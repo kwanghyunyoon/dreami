@@ -8,7 +8,9 @@ import {
   Dimensions,
   ScrollView,
   Platform,
-  Linking,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,13 +22,153 @@ import * as storage from '../utils/storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 5;
 
-const SUPPORT_EMAIL = 'trac3r1885@gmail.com';
+const DISCORD_WEBHOOK = 'YOUR_DISCORD_WEBHOOK_URL_HERE';
+const ISSUE_TYPES = ['Bug', 'Suggestion', 'Other'];
 
-function openFeedback() {
-  Linking.openURL(
-    `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Dreami Feedback')}&body=${encodeURIComponent('Hi,\n\nI found an issue:\n\n')}`,
+function FeedbackModal({ visible, onClose }) {
+  const [email, setEmail] = useState('');
+  const [issueType, setIssueType] = useState('Bug');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | sending | success | error
+
+  const reset = () => {
+    setEmail('');
+    setIssueType('Bug');
+    setDescription('');
+    setStatus('idle');
+  };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  const handleSubmit = async () => {
+    if (!description.trim()) return;
+    setStatus('sending');
+    try {
+      const res = await fetch(DISCORD_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeds: [{
+            title: 'Dreami Feedback',
+            color: 0x5B57B8,
+            fields: [
+              { name: 'Type', value: issueType, inline: true },
+              { name: 'Email', value: email.trim() || '—', inline: true },
+              { name: 'Description', value: description.trim() },
+            ],
+          }],
+        }),
+      });
+      setStatus(res.ok ? 'success' : 'error');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        style={fb.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <TouchableOpacity style={fb.backdrop} activeOpacity={1} onPress={handleClose} />
+        <View style={fb.sheet}>
+          {status === 'success' ? (
+            <View style={fb.centered}>
+              <Text style={fb.successIcon}>✅</Text>
+              <Text style={fb.successTitle}>Thanks!</Text>
+              <Text style={fb.successBody}>Your feedback has been received.</Text>
+              <TouchableOpacity style={fb.submitBtn} onPress={handleClose}>
+                <Text style={fb.submitBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <Text style={fb.sheetTitle}>Report an issue</Text>
+              <Text style={fb.fieldLabel}>Type</Text>
+              <View style={fb.typeRow}>
+                {ISSUE_TYPES.map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[fb.typeBtn, issueType === t && fb.typeBtnActive]}
+                    onPress={() => setIssueType(t)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[fb.typeText, issueType === t && fb.typeTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={fb.fieldLabel}>Email (optional)</Text>
+              <TextInput
+                style={fb.textInput}
+                placeholder="your@email.com"
+                placeholderTextColor={colors.subtext}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={setEmail}
+              />
+              <Text style={fb.fieldLabel}>Description</Text>
+              <TextInput
+                style={[fb.textInput, fb.textInputMulti]}
+                placeholder="Describe what happened..."
+                placeholderTextColor={colors.subtext}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                value={description}
+                onChangeText={setDescription}
+              />
+              {status === 'error' && (
+                <Text style={fb.errorText}>Something went wrong. Please try again.</Text>
+              )}
+              <TouchableOpacity
+                style={[fb.submitBtn, (!description.trim() || status === 'sending') && fb.submitBtnDisabled]}
+                onPress={handleSubmit}
+                disabled={!description.trim() || status === 'sending'}
+                activeOpacity={0.82}
+              >
+                <Text style={fb.submitBtnText}>
+                  {status === 'sending' ? 'Sending…' : 'Send feedback'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
+
+const fb = StyleSheet.create({
+  overlay:           { flex: 1, justifyContent: 'flex-end' },
+  backdrop:          { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet:             { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                       padding: spacing.xl, paddingBottom: spacing.xl + 16, gap: spacing.sm },
+  sheetTitle:        { ...typography.h2, marginBottom: spacing.xs },
+  fieldLabel:        { ...typography.caption, color: colors.subtext, marginTop: spacing.sm },
+  typeRow:           { flexDirection: 'row', gap: spacing.sm },
+  typeBtn:           { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm,
+                       borderWidth: 1.5, borderColor: colors.border, alignItems: 'center' },
+  typeBtnActive:     { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  typeText:          { ...typography.caption, color: colors.subtext },
+  typeTextActive:    { color: colors.primary, fontWeight: '700' },
+  textInput:         { backgroundColor: colors.surface, borderRadius: radius.sm,
+                       borderWidth: 1, borderColor: colors.border,
+                       paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
+                       ...typography.body, color: colors.text },
+  textInputMulti:    { height: 100, textAlignVertical: 'top' },
+  errorText:         { ...typography.caption, color: '#d33', textAlign: 'center' },
+  submitBtn:         { backgroundColor: colors.primary, borderRadius: radius.full,
+                       paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  submitBtnDisabled: { opacity: 0.45 },
+  submitBtnText:     { ...typography.h3, color: colors.white },
+  centered:          { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.md },
+  successIcon:       { fontSize: 48 },
+  successTitle:      { ...typography.h2 },
+  successBody:       { ...typography.body, color: colors.subtext, textAlign: 'center' },
+});
 
 // ─── Background star positions (stable, derived once) ────────────────────────
 const STARS = Array.from({ length: 18 }, (_, i) => ({
@@ -245,6 +387,7 @@ export default function OnboardingScreen({ onComplete }) {
   const insets = useSafeAreaInsets();
   const { t, lang, setLanguage } = useLanguage();
   const [step, setStep] = useState(0);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim  = useRef(new Animated.Value(1)).current;
@@ -307,10 +450,12 @@ export default function OnboardingScreen({ onComplete }) {
         ) : (
           <View style={styles.backBtn} />
         )}
-        <TouchableOpacity onPress={openFeedback} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity onPress={() => setFeedbackVisible(true)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Text style={styles.reportLink}>{t.onboarding.reportIssue ?? 'Report an issue'}</Text>
         </TouchableOpacity>
       </View>
+
+      <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
 
       {/* Animated step content */}
       <ScrollView
