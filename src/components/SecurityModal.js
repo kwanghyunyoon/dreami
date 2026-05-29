@@ -22,12 +22,10 @@ export default function SecurityModal({ visible, onClose }) {
 
   async function handleExport() {
     try {
-      const result = await exportData();
-      const json = JSON.stringify(result, null, 2);
-      console.log('[SecurityModal] Exported data:\n', json);
+      await exportData();
       Alert.alert(
         s.exportData,
-        'Your data has been logged to the console. (Clipboard copy coming soon.)',
+        'Your data export is ready. (Clipboard copy coming soon.)',
         [{ text: 'OK', style: 'default' }],
       );
     } catch (e) {
