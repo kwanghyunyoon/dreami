@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, TextInput,
@@ -29,10 +29,10 @@ function formatTime(dateStr) {
   return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function getSleepScore(ms, t) {
+function getSleepScore(ms, t, goalHours = 8) {
   const hours = ms / 3600000;
-  if (hours >= 7 && hours <= 9) return { score: t.log.scoreGreat, color: colors.success, icon: 'checkmark-circle' };
-  if (hours >= 6) return { score: t.log.scoreOK, color: colors.warning, icon: 'alert-circle' };
+  if (hours >= goalHours) return { score: t.log.scoreGreat, color: colors.success, icon: 'checkmark-circle' };
+  if (hours >= goalHours * 0.85) return { score: t.log.scoreOK, color: colors.warning, icon: 'alert-circle' };
   return { score: t.log.scoreShort, color: '#FF7E7E', icon: 'close-circle' };
 }
 
@@ -53,9 +53,17 @@ function QualityStars({ value, onChange }) {
 }
 
 // Simple bar chart without external library
-function WeekChart({ data }) {
-  const max = Math.max(...data.map(d => d.hours), 8);
+function WeekChart({ data, goalHours }) {
+  const max = Math.max(...data.map(d => d.hours), goalHours);
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  function barColor(hours, isToday) {
+    if (hours === 0) return colors.border;
+    if (hours >= goalHours) return colors.success;
+    if (hours >= goalHours * 0.85) return colors.warning;
+    return isToday ? colors.primary : colors.primaryMid;
+  }
+
   return (
     <View style={chartStyles.container}>
       {data.map((d, i) => (
@@ -65,8 +73,10 @@ function WeekChart({ data }) {
             <View
               style={[
                 chartStyles.bar,
-                { height: `${(d.hours / max) * 100}%` },
-                d.isToday && chartStyles.barToday,
+                {
+                  height: `${(d.hours / max) * 100}%`,
+                  backgroundColor: barColor(d.hours, d.isToday),
+                },
               ]}
             />
           </View>
@@ -88,19 +98,162 @@ const chartStyles = StyleSheet.create({
   dayLabelToday: { color: colors.primary, fontWeight: '700' },
 });
 
+const DAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function entryColor(entry, goalHours) {
+  if (!entry) return null;
+  const h = entry.duration / 3_600_000;
+  if (h >= goalHours)        return colors.success;
+  if (h >= goalHours * 0.85) return colors.warning;
+  return '#FF7E7E';
+}
+
+function MonthCalendar({ log, goalHours, locale }) {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+
+  // O(1) day-of-month → entry lookup for the visible month
+  const entryMap = useMemo(() => {
+    const map = {};
+    log.forEach((e) => {
+      const d = new Date(e.start);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!map[day]) map[day] = e;
+      }
+    });
+    return map;
+  }, [log, year, month]);
+
+  const firstWeekday  = new Date(year, month, 1).getDay();
+  const daysInMonth   = new Date(year, month + 1, 0).getDate();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  const todayDate     = now.getDate();
+
+  const cells = [
+    ...Array(firstWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(locale, {
+    month: 'long', year: 'numeric',
+  });
+
+  const prevMonth = () => {
+    if (month === 0) { setYear((y) => y - 1); setMonth(11); }
+    else setMonth((m) => m - 1);
+  };
+
+  const nextMonth = () => {
+    if (isCurrentMonth) return;
+    if (month === 11) { setYear((y) => y + 1); setMonth(0); }
+    else setMonth((m) => m + 1);
+  };
+
+  return (
+    <Card style={calStyles.card}>
+      {/* Month navigation */}
+      <View style={calStyles.header}>
+        <TouchableOpacity onPress={prevMonth} hitSlop={8}>
+          <Ionicons name="chevron-back" size={20} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={calStyles.monthLabel}>{monthLabel}</Text>
+        <TouchableOpacity onPress={nextMonth} hitSlop={8} disabled={isCurrentMonth}>
+          <Ionicons name="chevron-forward" size={20} color={isCurrentMonth ? colors.border : colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Weekday headers */}
+      <View style={calStyles.row}>
+        {DAY_HEADERS.map((d, i) => (
+          <Text key={i} style={calStyles.dayHeader}>{d}</Text>
+        ))}
+      </View>
+
+      {/* Day grid */}
+      <View style={calStyles.grid}>
+        {cells.map((day, i) => {
+          if (!day) return <View key={`blank-${i}`} style={calStyles.cell} />;
+          const entry  = entryMap[day];
+          const color  = entryColor(entry, goalHours);
+          const isToday = isCurrentMonth && day === todayDate;
+          return (
+            <View key={day} style={calStyles.cell}>
+              <View style={[
+                calStyles.bubble,
+                color  && { backgroundColor: color + '28' },
+                isToday && calStyles.todayBubble,
+              ]}>
+                <Text style={[
+                  calStyles.dayNum,
+                  color   && { color, fontWeight: '700' },
+                  isToday && calStyles.todayNum,
+                ]}>
+                  {day}
+                </Text>
+                {color && <View style={[calStyles.dot, { backgroundColor: color }]} />}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Legend */}
+      <View style={calStyles.legend}>
+        {[
+          { color: colors.success, label: 'Goal met' },
+          { color: colors.warning, label: 'Close' },
+          { color: '#FF7E7E',      label: 'Short' },
+        ].map(({ color, label }) => (
+          <View key={label} style={calStyles.legendItem}>
+            <View style={[calStyles.legendDot, { backgroundColor: color }]} />
+            <Text style={calStyles.legendText}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
+const calStyles = StyleSheet.create({
+  card:        { marginBottom: spacing.lg },
+  header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  monthLabel:  { ...typography.body, fontWeight: '700' },
+  row:         { flexDirection: 'row', marginBottom: 4 },
+  dayHeader:   { flex: 1, textAlign: 'center', ...typography.caption, fontWeight: '700', color: colors.subtext },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap' },
+  cell:        { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 2 },
+  bubble:      { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  todayBubble: { borderWidth: 1.5, borderColor: colors.primary },
+  dayNum:      { ...typography.caption, fontSize: 12 },
+  todayNum:    { color: colors.primary, fontWeight: '700' },
+  dot:         { width: 4, height: 4, borderRadius: 2, position: 'absolute', bottom: 4 },
+  legend:      { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm, justifyContent: 'center' },
+  legendItem:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot:   { width: 8, height: 8, borderRadius: 4 },
+  legendText:  { ...typography.caption },
+});
+
 export default function LogScreen() {
   const { t } = useLanguage();
   const [log, setLog] = useState([]);
   const [weekData, setWeekData] = useState([]);
+  const [sleepGoal, setSleepGoal] = useState(8);
   const [crisisVisible, setCrisisVisible] = useState(false);
   const debounceTimers = useRef({});
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const raw = await storage.getItem('sleepLog');
+        const [raw, goalRaw] = await Promise.all([
+          storage.getItem('sleepLog'),
+          storage.getItem('sleepGoal'),
+        ]);
         const data = raw ? JSON.parse(raw) : [];
+        const goal = goalRaw ? parseFloat(goalRaw) : 8;
         setLog(data);
+        setSleepGoal(goal);
 
         // Build week chart
         const today = new Date();
@@ -170,7 +323,7 @@ export default function LogScreen() {
         </Card>
         <Card style={styles.statCard}>
           <Text style={styles.statValue}>
-            {log.filter(e => e.duration >= 7 * 3600000).length}
+            {log.filter(e => e.duration >= sleepGoal * 3_600_000).length}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Text style={styles.statLabel}>{t.log.goodNights}</Text>
@@ -186,7 +339,7 @@ export default function LogScreen() {
             <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>{t.log.thisWeek}</Text>
             <InfoTooltip text={t.tooltips.weekChart} />
           </View>
-          <WeekChart data={weekData} />
+          <WeekChart data={weekData} goalHours={sleepGoal} />
           <View style={styles.chartLegend}>
             <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
             <Text style={styles.legendText}>{t.log.today}</Text>
@@ -194,6 +347,11 @@ export default function LogScreen() {
             <Text style={styles.legendText}>{t.log.otherNights}</Text>
           </View>
         </Card>
+      )}
+
+      {/* Month Calendar */}
+      {log.length > 0 && (
+        <MonthCalendar log={log} goalHours={sleepGoal} locale={t.locale} />
       )}
 
       {/* Log Entries */}
@@ -205,7 +363,7 @@ export default function LogScreen() {
         </Card>
       ) : (
         log.map((entry, i) => {
-          const score = getSleepScore(entry.duration, t);
+          const score = getSleepScore(entry.duration, t, sleepGoal);
           return (
             <Card key={i} style={styles.entryCard}>
               <View style={styles.entryHeader}>

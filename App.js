@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import AlarmScreen from './src/screens/AlarmScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import LanguagePicker from './src/components/LanguagePicker';
+import GentleAlarmModal from './src/components/GentleAlarmModal';
 import { colors, shadow } from './src/theme';
 import { LanguageProvider, useLanguage } from './src/LanguageContext';
 import { HelpProvider, useHelp } from './src/context/HelpContext';
@@ -165,6 +167,40 @@ function AppNavigator() {
 function AppWithOnboarding() {
   const [state, setState] = useState({ onboardingDone: false, checking: true });
   const { showHelp, setShowHelp } = useHelp();
+  const { t } = useLanguage();
+
+  // Gentle alarm state — shown when an alarm notification fires and gentleWake is on
+  const [gentleAlarm, setGentleAlarm] = useState({ visible: false, rampMinutes: 5 });
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    async function checkGentleWake() {
+      const raw = await storage.getItem('alarm');
+      if (!raw) return null;
+      const alarm = JSON.parse(raw);
+      return alarm.gentleWake ? alarm.rampMinutes ?? 5 : null;
+    }
+
+    // Fires when notification arrives while app is in foreground
+    const foregroundSub = Notifications.addNotificationReceivedListener(async (notification) => {
+      if (notification.request.content.data?.kind !== 'wake') return;
+      const ramp = await checkGentleWake();
+      if (ramp) setGentleAlarm({ visible: true, rampMinutes: ramp });
+    });
+
+    // Fires when user taps the notification (app was backgrounded)
+    const responseSub = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      if (response.notification.request.content.data?.kind !== 'wake') return;
+      const ramp = await checkGentleWake();
+      if (ramp) setGentleAlarm({ visible: true, rampMinutes: ramp });
+    });
+
+    return () => {
+      foregroundSub.remove();
+      responseSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     storage.getItem('onboarding').then((value) => {
@@ -187,7 +223,17 @@ function AppWithOnboarding() {
     );
   }
 
-  return <AppNavigator />;
+  return (
+    <>
+      <AppNavigator />
+      <GentleAlarmModal
+        visible={gentleAlarm.visible}
+        rampMinutes={gentleAlarm.rampMinutes}
+        strings={t.alarm}
+        onDismiss={() => setGentleAlarm({ visible: false, rampMinutes: 5 })}
+      />
+    </>
+  );
 }
 
 export default function App() {

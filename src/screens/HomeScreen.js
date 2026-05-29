@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as storage from '../utils/storage';
+import { calcStreak } from '../utils/streak';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { colors, typography, spacing, radius, shadow } from '../theme';
@@ -12,6 +13,7 @@ import Card from '../components/Card';
 import { useLanguage } from '../LanguageContext';
 import { useHelp } from '../context/HelpContext';
 import BreathingModal from '../components/BreathingModal';
+import WakeQualityModal from '../components/WakeQualityModal';
 import InfoTooltip from '../components/InfoTooltip';
 
 // Curated Korean sleep / guided-imagery sessions.
@@ -62,9 +64,12 @@ export default function HomeScreen({ navigation }) {
   const [sleepStart, setSleepStart] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [lastSleep, setLastSleep] = useState(null);
+  const [streak, setStreak] = useState(0);
+  const [sleepGoal, setSleepGoal] = useState(8);
   const [bedtimeSuggestion, setBedtimeSuggestion] = useState(null);
   const [reminderSet, setReminderSet] = useState(false);
   const [breathingVisible, setBreathingVisible] = useState(false);
+  const [pendingEntry, setPendingEntry] = useState(null);
   const lastSuggestionKey = useRef(null); // tracks 'HH:MM' of current suggestion
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const greeting = getGreeting(t);
@@ -74,11 +79,15 @@ export default function HomeScreen({ navigation }) {
     (async () => {
       const stored = await storage.getItem('sleepStart');
       const last = await storage.getItem('lastSleep');
+      const logRaw = await storage.getItem('sleepLog');
       if (stored) {
         setIsSleeping(true);
         setSleepStart(stored);
       }
       if (last) setLastSleep(JSON.parse(last));
+      if (logRaw) setStreak(calcStreak(JSON.parse(logRaw)));
+      const goal = await storage.getItem('sleepGoal');
+      if (goal) setSleepGoal(parseFloat(goal));
     })();
   }, []);
 
@@ -201,7 +210,6 @@ export default function HomeScreen({ navigation }) {
       const duration = Date.now() - new Date(sleepStart).getTime();
       const entry = { start: sleepStart, end, duration, quality: null };
 
-      // Save to log
       const raw = await storage.getItem('sleepLog');
       const log = raw ? JSON.parse(raw) : [];
       log.unshift(entry);
@@ -213,8 +221,27 @@ export default function HomeScreen({ navigation }) {
       setSleepStart(null);
       setElapsed(0);
       setLastSleep(entry);
+      setStreak(calcStreak(log));
+      setPendingEntry(entry);
     }
   };
+
+  const handleQualitySave = useCallback(async (quality) => {
+    if (!pendingEntry) return;
+    const raw = await storage.getItem('sleepLog');
+    const log = raw ? JSON.parse(raw) : [];
+    if (log.length > 0) {
+      log[0] = { ...log[0], quality };
+      await storage.setItem('sleepLog', JSON.stringify(log));
+      await storage.setItem('lastSleep', JSON.stringify(log[0]));
+      setLastSleep(log[0]);
+    }
+    setPendingEntry(null);
+  }, [pendingEntry]);
+
+  const handleQualitySkip = useCallback(() => {
+    setPendingEntry(null);
+  }, []);
 
   return (
     <View style={styles.screenRoot}>
@@ -277,6 +304,43 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.stat}>
               <Text style={styles.statValue}>{formatTime(lastSleep.end)}</Text>
               <Text style={styles.statLabel}>{t.home.wokeUp}</Text>
+            </View>
+          </View>
+          {/* Goal progress bar */}
+          {(() => {
+            const pct = Math.min(lastSleep.duration / (sleepGoal * 3_600_000), 1);
+            const met = pct >= 1;
+            const barColor = met ? colors.success : pct >= 0.85 ? colors.warning : colors.primary;
+            return (
+              <View style={styles.goalWrap}>
+                <View style={styles.goalTrack}>
+                  <View style={[styles.goalBar, { width: `${pct * 100}%`, backgroundColor: barColor }]} />
+                </View>
+                <Text style={[styles.goalLabel, { color: barColor }]}>
+                  {met ? '✓ Goal met' : `${Math.round(pct * 100)}% of ${sleepGoal % 1 === 0 ? sleepGoal : sleepGoal.toFixed(1)}h goal`}
+                </Text>
+              </View>
+            );
+          })()}
+        </Card>
+      )}
+
+      {/* Streak card */}
+      {!isSleeping && (
+        <Card style={styles.card}>
+          <View style={styles.streakRow}>
+            <Text style={styles.streakEmoji}>{streak >= 3 ? '🔥' : '🌙'}</Text>
+            <View style={{ flex: 1 }}>
+              {streak >= 1 ? (
+                <>
+                  <Text style={styles.streakCount}>
+                    {streak} {streak === 1 ? t.home.streak.night : t.home.streak.nights}
+                  </Text>
+                  <Text style={styles.streakSub}>{t.home.streak.keep}</Text>
+                </>
+              ) : (
+                <Text style={styles.streakSub}>{t.home.streak.start}</Text>
+              )}
             </View>
           </View>
         </Card>
@@ -400,6 +464,12 @@ export default function HomeScreen({ navigation }) {
       visible={breathingVisible}
       onClose={() => setBreathingVisible(false)}
     />
+    <WakeQualityModal
+      visible={!!pendingEntry}
+      strings={t.home.wakeQuality}
+      onSave={handleQualitySave}
+      onSkip={handleQualitySkip}
+    />
     </View>
   );
 }
@@ -482,6 +552,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
   },
+
+  // Goal progress
+  goalWrap: { marginTop: spacing.md, gap: 6 },
+  goalTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
+  goalBar: { height: '100%', borderRadius: 3 },
+  goalLabel: { ...typography.caption, fontWeight: '600' },
+
+  // Streak
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  streakEmoji: { fontSize: 28 },
+  streakCount: { ...typography.h3, color: colors.primary },
+  streakSub: { ...typography.caption, marginTop: 2 },
 
   // Smart bedtime suggestion
   suggRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.md },

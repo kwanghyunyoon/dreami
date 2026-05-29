@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -13,9 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../LanguageContext';
 import { colors, spacing, shadow } from '../theme';
-import { exportData, clearAllData } from '../utils/storage';
+import * as storage from '../utils/storage';
+const { exportData, clearAllData } = storage;
 import LanguagePicker from '../components/LanguagePicker';
 import SecurityModal from '../components/SecurityModal';
+import SleepGoalPicker from '../components/SleepGoalPicker';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -91,6 +93,14 @@ export default function SettingsScreen() {
 
   const [langPickerVisible, setLangPickerVisible] = useState(false);
   const [securityModalVisible, setSecurityModalVisible] = useState(false);
+  const [goalPickerVisible, setGoalPickerVisible] = useState(false);
+  const [sleepGoal, setSleepGoal] = useState(8);
+
+  useEffect(() => {
+    storage.getItem('sleepGoal').then((v) => {
+      if (v) setSleepGoal(parseFloat(v));
+    });
+  }, []);
 
   // Derive the current language object from context
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
@@ -168,7 +178,22 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* ── Section 2: Privacy & Security ─────────────────────────────── */}
+        {/* ── Section 2: Sleep ──────────────────────────────────────────── */}
+        <SectionHeader icon="moon-outline" label="Sleep" />
+
+        <View style={styles.group}>
+          <SettingsRow
+            isOnly
+            icon="time-outline"
+            iconBg={colors.primaryLight}
+            iconColor={colors.primary}
+            label={s.sleepGoal}
+            sublabel={s.sleepGoalSub(sleepGoal % 1 === 0 ? sleepGoal : sleepGoal.toFixed(1))}
+            onPress={() => setGoalPickerVisible(true)}
+          />
+        </View>
+
+        {/* ── Section 3: Privacy & Security ─────────────────────────────── */}
         <SectionHeader icon="shield-checkmark-outline" label={s.security} />
 
         <View style={styles.group}>
@@ -258,6 +283,17 @@ export default function SettingsScreen() {
       <SecurityModal
         visible={securityModalVisible}
         onClose={() => setSecurityModalVisible(false)}
+      />
+      <SleepGoalPicker
+        visible={goalPickerVisible}
+        current={sleepGoal}
+        title={s.sleepGoalTitle}
+        cancelLabel={s.sleepGoalCancel}
+        onSelect={async (h) => {
+          setSleepGoal(h);
+          await storage.setItem('sleepGoal', String(h));
+        }}
+        onClose={() => setGoalPickerVisible(false)}
       />
     </>
   );

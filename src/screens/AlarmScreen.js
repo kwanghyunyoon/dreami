@@ -165,6 +165,8 @@ export default function AlarmScreen() {
   const [selectedDays, setSelectedDays] = useState([1, 2, 3, 4, 5]); // Mon–Fri
   const [bedtimeReminder, setBedtimeReminder] = useState(false);
   const [reminderMinutes, setReminderMinutes] = useState(30);
+  const [gentleWake, setGentleWake]     = useState(false);
+  const [rampMinutes, setRampMinutes]   = useState(5);
   const [permGranted, setPermGranted]   = useState(false);
 
   // Load persisted state
@@ -180,6 +182,8 @@ export default function AlarmScreen() {
         setSelectedDays(a.days ?? [1, 2, 3, 4, 5]);
         setBedtimeReminder(a.bedtimeReminder ?? false);
         setReminderMinutes(a.reminderMinutes ?? 30);
+        setGentleWake(a.gentleWake ?? false);
+        setRampMinutes(a.rampMinutes ?? 5);
       }
     })();
   }, []);
@@ -213,6 +217,8 @@ export default function AlarmScreen() {
       days: selectedDays,
       bedtimeReminder,
       reminderMinutes,
+      gentleWake,
+      rampMinutes,
       ...overrides,
     };
     await storage.setItem('alarm', JSON.stringify(state));
@@ -239,7 +245,7 @@ export default function AlarmScreen() {
     } else {
       await cancelAlarmNotifications();
     }
-  }, [alarmHour, alarmMinute, isPM, alarmOn, selectedDays, bedtimeReminder, reminderMinutes, t]);
+  }, [alarmHour, alarmMinute, isPM, alarmOn, selectedDays, bedtimeReminder, reminderMinutes, gentleWake, rampMinutes, t]);
 
   const toggleDay = (i) => {
     const next = selectedDays.includes(i)
@@ -411,6 +417,44 @@ export default function AlarmScreen() {
                     ]}
                   >
                     {t.alarm.before(m)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+      </Card>
+
+      {/* Gentle wake */}
+      <Card style={styles.reminderCard}>
+        <View style={styles.reminderHeader}>
+          <View style={[styles.reminderIcon, { backgroundColor: `${colors.success}22` }]}>
+            <Ionicons name="sunny-outline" size={20} color={colors.success} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleTitle}>{t.alarm.gentleWake}</Text>
+            <Text style={styles.reminderSub}>{t.alarm.gentleWakeSub}</Text>
+          </View>
+          <Switch
+            value={gentleWake}
+            onValueChange={(v) => { setGentleWake(v); saveAlarm({ gentleWake: v }); }}
+            trackColor={{ false: colors.border, true: `${colors.success}80` }}
+            thumbColor={gentleWake ? colors.success : colors.white}
+          />
+        </View>
+
+        {gentleWake && (
+          <>
+            <Text style={styles.reminderLabel}>{t.alarm.rampLabel}</Text>
+            <View style={styles.reminderPills}>
+              {[3, 5, 10].map((m, i) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.reminderPill, rampMinutes === m && styles.reminderPillActive]}
+                  onPress={() => { setRampMinutes(m); saveAlarm({ rampMinutes: m }); }}
+                >
+                  <Text style={[styles.reminderPillText, rampMinutes === m && styles.reminderPillTextActive]}>
+                    {t.alarm.rampOptions[i]}
                   </Text>
                 </TouchableOpacity>
               ))}

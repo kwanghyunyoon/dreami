@@ -38,6 +38,7 @@ const ALL_KEYS = [
   'soundsCategory',
   'onboarding',
   'sleepStart',
+  'sleepGoal',
 ];
 
 export const DATA_INVENTORY = [

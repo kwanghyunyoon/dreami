@@ -99,7 +99,11 @@ const volStyles = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function SoundsScreen() {
   const { t } = useLanguage();
-  const { playingId, isLoading, volume, play, stopAll, changeVolume } = useAudioPlayer();
+  const {
+    primaryId, layerId, loadingId, isActive,
+    volume, toggle, stopAll, changeVolume, updateTimer,
+  } = useAudioPlayer();
+  const playingId = primaryId; // used by banner & category dot logic
   const [timerIndex, setTimerIndex] = useState(1); // default: 30 min
   const [activeCategoryId, setActiveCategoryId] = useState('nature');
   const [infoSound, setInfoSound] = useState(null);
@@ -131,18 +135,16 @@ export default function SoundsScreen() {
         Animated.timing(scaleAnims[sound.id], { toValue: 1,    duration: 120, useNativeDriver: true }),
       ]).start();
 
-      if (playingId === sound.id) {
-        stopAll();
-      } else {
-        play(sound.id, sound.source, TIMER_MS[timerIndex]);
-      }
+      toggle(sound.id, sound.source, TIMER_MS[timerIndex]);
     },
-    [playingId, timerIndex, play, stopAll],
+    [timerIndex, toggle],
   );
 
   // Find playing sound meta (may be in a different category than what's visible)
-  const activeSoundMeta  = SOUNDS.find(s => s.id === playingId);
-  const activeSoundI18n  = playingId ? t.soundList[playingId] : null;
+  const activeSoundMeta  = SOUNDS.find(s => s.id === primaryId);
+  const activeSoundI18n  = primaryId ? t.soundList[primaryId] : null;
+  const layerSoundMeta   = SOUNDS.find(s => s.id === layerId);
+  const layerSoundI18n   = layerId ? t.soundList[layerId] : null;
 
   return (
     <View style={styles.screenRoot}>
@@ -193,11 +195,12 @@ export default function SoundsScreen() {
       </ScrollView>
 
       {/* ── Now-playing banner ──────────────────────────────────────────────── */}
-      {playingId && activeSoundMeta && (
+      {primaryId && activeSoundMeta && (
         <View style={[styles.playingBanner, { borderColor: activeSoundMeta.color + '40' }]}>
           <View style={[styles.playingDot, { backgroundColor: activeSoundMeta.color }]} />
-          <Text style={[styles.playingText, { color: activeSoundMeta.color }]}>
+          <Text style={[styles.playingText, { color: activeSoundMeta.color }]} numberOfLines={1}>
             {t.sounds.nowPlaying} {activeSoundI18n?.label}
+            {layerId && layerSoundI18n ? ` + ${layerSoundI18n.label}` : ''}
           </Text>
           <TouchableOpacity onPress={stopAll} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <Ionicons name="close-circle" size={20} color={activeSoundMeta.color} />
@@ -213,8 +216,9 @@ export default function SoundsScreen() {
       {/* ── Sound grid ──────────────────────────────────────────────────────── */}
       <View style={styles.grid}>
         {visibleSounds.map((sound) => {
-          const active   = playingId === sound.id;
-          const loading  = isLoading && active;
+          const active   = isActive(sound.id);
+          const isLayer  = sound.id === layerId;
+          const loading  = loadingId === sound.id;
           const soundI18n = t.soundList[sound.id] ?? { label: sound.id, desc: '' };
 
           return (
@@ -232,7 +236,7 @@ export default function SoundsScreen() {
                 ]}
                 onPress={() => handleToggle(sound)}
                 activeOpacity={sound.locked ? 1 : undefined}
-                disabled={sound.locked || (isLoading && !active)}
+                disabled={sound.locked || (loadingId !== null && loadingId !== sound.id)}
               >
                 {/* Icon badge */}
                 <View style={[styles.iconWrap, { backgroundColor: active ? sound.color : sound.bg }]}>
@@ -245,6 +249,12 @@ export default function SoundsScreen() {
                   {sound.locked && (
                     <View style={styles.lockBadge}>
                       <Ionicons name="lock-closed-outline" size={11} color={colors.subtext} />
+                    </View>
+                  )}
+                  {/* Layer badge */}
+                  {isLayer && (
+                    <View style={[styles.layerBadge, { backgroundColor: sound.color }]}>
+                      <Text style={styles.layerBadgeText}>+</Text>
                     </View>
                   )}
                 </View>
@@ -294,10 +304,7 @@ export default function SoundsScreen() {
             onPress={() => {
               setTimerIndex(index);
               storage.setItem('soundsTimer', String(index));
-              if (playingId) {
-                const sound = SOUNDS.find(s => s.id === playingId);
-                if (sound) play(sound.id, sound.source, TIMER_MS[index]);
-              }
+              if (primaryId || layerId) updateTimer(TIMER_MS[index]);
             }}
           >
             <Text style={[styles.timerLabel, timerIndex === index && styles.timerLabelActive]}>
@@ -374,6 +381,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   lockedWrapper: { opacity: 0.5 },
+  layerBadge: {
+    position: 'absolute', top: -5, right: -5,
+    width: 16, height: 16, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  layerBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', lineHeight: 14 },
   infoBtn: { position: 'absolute', top: 8, right: 8 },
   soundLabel: { ...typography.body, fontWeight: '600', marginBottom: 2 },
   soundDesc: { ...typography.caption },

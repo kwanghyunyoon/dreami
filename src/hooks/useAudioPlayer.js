@@ -2,98 +2,156 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { Audio } from 'expo-av';
 
 /**
- * Manages a single ambient sound: load → play → loop → timer stop → unload.
- * Only one sound plays at a time. Handles background playback and silent-mode on iOS.
+ * Manages up to two layered ambient sounds: primary + optional layer.
+ * Tapping an active sound stops its slot; tapping a third sound replaces the layer.
+ * Both sounds share the same volume level.
  */
 export default function useAudioPlayer() {
-  const soundRef = useRef(null);
+  const refs    = useRef({ primary: null, layer: null });
   const timerRef = useRef(null);
-  const [playingId, setPlayingId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [volume, setVolume] = useState(0.8);
 
-  // Configure audio session once on mount
+  const [primaryId, setPrimaryId] = useState(null);
+  const [layerId,   setLayerId]   = useState(null);
+  const [loadingId, setLoadingId] = useState(null);
+  const [volume,    setVolume]    = useState(0.8);
+
   useEffect(() => {
     Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
-      staysActiveInBackground: true,   // keep playing when app is backgrounded
-      playsInSilentModeIOS: true,      // respect sleep use-case on iOS
+      staysActiveInBackground: true,
+      playsInSilentModeIOS: true,
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
     });
-
     return () => {
-      _cleanup();
+      _clearTimer();
+      _unloadSlot('primary');
+      _unloadSlot('layer');
     };
   }, []);
 
-  /** Internal: unload sound and clear timer without touching state */
-  const _cleanup = async () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch (_) {
-        // Ignore errors on cleanup (e.g. already unloaded)
-      }
-      soundRef.current = null;
+  // ── Internal helpers ────────────────────────────────────────────────────────
+
+  const _clearTimer = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  };
+
+  const _unloadSlot = async (slot) => {
+    const snd = refs.current[slot];
+    if (!snd) return;
+    try { await snd.stopAsync(); await snd.unloadAsync(); } catch (_) {}
+    refs.current[slot] = null;
+  };
+
+  const _armTimer = (timerMs) => {
+    _clearTimer();
+    if (timerMs > 0) {
+      timerRef.current = setTimeout(async () => {
+        await _unloadSlot('primary');
+        await _unloadSlot('layer');
+        setPrimaryId(null);
+        setLayerId(null);
+      }, timerMs);
     }
   };
 
-  /** Stop the current sound and clear state */
-  const stopAll = useCallback(async () => {
-    await _cleanup();
-    setPlayingId(null);
-  }, []);
-
-  /**
-   * Play a sound by id.
-   * @param {string} soundId   - identifier string (e.g. 'rain')
-   * @param {object} source    - expo-av source: require() or { uri: '...' }
-   * @param {number} timerMs   - auto-stop after this many ms; 0 = never
-   */
-  const play = useCallback(async (soundId, source, timerMs = 0) => {
-    setIsLoading(true);
+  const _loadSlot = async (slot, id, source, vol) => {
+    setLoadingId(id);
     try {
-      // Unload whatever was playing first
-      await _cleanup();
-
+      await _unloadSlot(slot);
       const { sound } = await Audio.Sound.createAsync(
         source,
-        { isLooping: true, volume, shouldPlay: true },
+        { isLooping: true, volume: vol, shouldPlay: true },
       );
-      soundRef.current = sound;
-      setPlayingId(soundId);
-
-      if (timerMs > 0) {
-        timerRef.current = setTimeout(async () => {
-          await _cleanup();
-          setPlayingId(null);
-        }, timerMs);
-      }
+      refs.current[slot] = sound;
+      if (slot === 'primary') setPrimaryId(id);
+      else setLayerId(id);
     } catch (err) {
-      console.warn('[useAudioPlayer] playback error:', err);
-      setPlayingId(null);
+      console.warn('[useAudioPlayer] load error:', err);
     } finally {
-      setIsLoading(false);
+      setLoadingId(null);
     }
-  }, [volume]);
+  };
+
+  // ── Public API ──────────────────────────────────────────────────────────────
+
+  const stopAll = useCallback(async () => {
+    _clearTimer();
+    await Promise.all([_unloadSlot('primary'), _unloadSlot('layer')]);
+    setPrimaryId(null);
+    setLayerId(null);
+  }, []);
 
   /**
-   * Change playback volume (0–1). Applies immediately if a sound is loaded.
+   * Toggle a sound:
+   *   - Already primary  → stop primary; promote layer to primary if present
+   *   - Already layer    → stop layer
+   *   - No primary       → load as primary
+   *   - Primary, no layer → load as layer
+   *   - Both full        → replace layer
    */
+  const toggle = useCallback(async (id, source, timerMs = 0) => {
+    const curPrimary = primaryId;
+    const curLayer   = layerId;
+
+    if (id === curPrimary) {
+      await _unloadSlot('primary');
+      if (curLayer) {
+        // promote layer → primary (audio object keeps playing, just move the ref)
+        refs.current.primary = refs.current.layer;
+        refs.current.layer   = null;
+        setPrimaryId(curLayer);
+        setLayerId(null);
+      } else {
+        setPrimaryId(null);
+      }
+      _armTimer(timerMs);
+      return;
+    }
+
+    if (id === curLayer) {
+      await _unloadSlot('layer');
+      setLayerId(null);
+      _armTimer(timerMs);
+      return;
+    }
+
+    const slot = curPrimary ? 'layer' : 'primary';
+    await _loadSlot(slot, id, source, volume);
+    _armTimer(timerMs);
+  }, [primaryId, layerId, volume]);
+
+  /** Reset the auto-stop timer without reloading audio. */
+  const updateTimer = useCallback((timerMs) => {
+    _armTimer(timerMs);
+  }, []);
+
+  /** Change volume for all active slots. */
   const changeVolume = useCallback(async (v) => {
     setVolume(v);
-    if (soundRef.current) {
-      try {
-        await soundRef.current.setVolumeAsync(v);
-      } catch (_) {}
+    for (const slot of ['primary', 'layer']) {
+      if (refs.current[slot]) {
+        try { await refs.current[slot].setVolumeAsync(v); } catch (_) {}
+      }
     }
   }, []);
 
-  return { playingId, isLoading, volume, play, stopAll, changeVolume };
+  const isActive = useCallback(
+    (id) => id === primaryId || id === layerId,
+    [primaryId, layerId],
+  );
+
+  return {
+    primaryId,
+    layerId,
+    playingId: primaryId,        // kept for banner backward-compat
+    loadingId,
+    isLoading: loadingId !== null,
+    isActive,
+    volume,
+    toggle,
+    stopAll,
+    changeVolume,
+    updateTimer,
+  };
 }
