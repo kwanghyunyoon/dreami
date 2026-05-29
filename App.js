@@ -15,6 +15,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import LanguagePicker from './src/components/LanguagePicker';
 import { colors, shadow } from './src/theme';
 import { LanguageProvider, useLanguage } from './src/LanguageContext';
+import { HelpProvider, useHelp } from './src/context/HelpContext';
 import * as storage from './src/utils/storage';
 
 const Tab = createBottomTabNavigator();
@@ -163,6 +164,7 @@ function AppNavigator() {
 
 function AppWithOnboarding() {
   const [state, setState] = useState({ onboardingDone: false, checking: true });
+  const { showHelp, setShowHelp } = useHelp();
 
   useEffect(() => {
     storage.getItem('onboarding').then((value) => {
@@ -174,10 +176,13 @@ function AppWithOnboarding() {
     return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
-  if (!state.onboardingDone) {
+  if (!state.onboardingDone || showHelp) {
     return (
       <OnboardingScreen
-        onComplete={() => setState({ onboardingDone: true, checking: false })}
+        onComplete={() => {
+          setState({ onboardingDone: true, checking: false });
+          setShowHelp(false);
+        }}
       />
     );
   }
@@ -190,7 +195,9 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <LanguageProvider>
-        <AppWithOnboarding />
+        <HelpProvider>
+          <AppWithOnboarding />
+        </HelpProvider>
       </LanguageProvider>
     </SafeAreaProvider>
   );

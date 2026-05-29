@@ -36,6 +36,15 @@ export const translations = {
       bedtimeReminderTitle: 'Time for bed 🌙',
       bedtimeReminderBody: "Your suggested bedtime is now. Sweet dreams!",
       tonightSession: "Tonight's Session",
+      gettingStarted: {
+        title: "Here's how to start",
+        steps: [
+          { emoji: '🌙', label: 'Track Sleep', sub: 'Tap the moon button to start tracking your sleep tonight' },
+          { emoji: '🎵', label: 'Sounds', sub: 'Play ambient sounds to help you drift off' },
+          { emoji: '⏰', label: 'Alarm', sub: 'Set your wake-up alarm for better sleep consistency' },
+        ],
+      },
+      helpBtn: 'Not sure where to go?',
     },
     sounds: {
       title: 'Ambient Sounds',
@@ -166,6 +175,19 @@ export const translations = {
       scoreGreat: 'Great',
       scoreOK: 'OK',
       scoreShort: 'Short',
+      notes: 'Notes',
+      notesPlaceholder: 'How did you sleep? Any dreams?',
+      crisis: {
+        title: "You're not alone",
+        body: "It sounds like you might be going through something really heavy right now. That takes courage to write down.\n\nIf you're having thoughts of suicide or self-harm, please reach out — someone is ready to listen right now.",
+        lines: [
+          { emoji: '📞', title: '988 Suicide & Crisis Lifeline', sub: 'Call or text 988', action: 'tel:988' },
+          { emoji: '💬', title: 'Crisis Text Line', sub: 'Text HOME to 741741', action: 'sms:741741?body=HOME' },
+          { emoji: '🌍', title: 'Find a Helpline', sub: 'findahelpline.com', action: 'https://findahelpline.com' },
+        ],
+        closeBtn: 'Close',
+      },
+      crisisKeywords: ['suicide', 'suicidal', 'kill myself', 'end my life', 'take my life', "don't want to live", 'dont want to live', 'want to die', 'wanted to die', 'no reason to live', 'better off dead', 'better off without me', "can't go on", 'cant go on', 'ending it', 'end it all', 'hurt myself', 'self harm', 'self-harm', 'cutting myself', 'overdose', 'not worth living'],
     },
     alarm: {
       title: 'Alarm',
@@ -277,6 +299,15 @@ export const translations = {
       bedtimeReminderTitle: '잠잘 시간이에요 🌙',
       bedtimeReminderBody: '추천 취침 시간이 됐어요. 편한 밤 되세요!',
       tonightSession: '오늘 밤 가이드 세션',
+      gettingStarted: {
+        title: '이렇게 시작해보세요',
+        steps: [
+          { emoji: '🌙', label: '수면 기록', sub: '달 버튼을 눌러 오늘 밤 수면 기록을 시작하세요' },
+          { emoji: '🎵', label: '수면 소리', sub: '잠드는 데 도움이 되는 소리를 틀어보세요' },
+          { emoji: '⏰', label: '알람', sub: '기상 알람을 설정하면 수면 패턴이 규칙적으로 돼요' },
+        ],
+      },
+      helpBtn: '어디서 시작할지 모르겠어요?',
     },
     sounds: {
       title: '수면 소리',
@@ -407,6 +438,19 @@ export const translations = {
       scoreGreat: '좋음',
       scoreOK: '보통',
       scoreShort: '부족',
+      notes: '메모',
+      notesPlaceholder: '어떻게 주무셨나요? 꿈을 꾸셨나요?',
+      crisis: {
+        title: '혼자가 아니에요',
+        body: '지금 많이 힘드신 것 같아요. 이렇게 솔직하게 쓰신 것만으로도 정말 용감한 일이에요.\n\n자해나 자살에 대한 생각이 드신다면, 지금 바로 도움을 받으세요 — 언제든지 들어줄 준비가 되어 있어요.',
+        lines: [
+          { emoji: '📞', title: '자살예방상담전화', sub: '1393', action: 'tel:1393' },
+          { emoji: '💬', title: '정신건강 위기상담전화', sub: '1577-0199', action: 'tel:15770199' },
+          { emoji: '🌍', title: '생명의전화', sub: '1588-9191', action: 'tel:15889191' },
+        ],
+        closeBtn: '닫기',
+      },
+      crisisKeywords: ['자살', '자살하고 싶다', '자살하고싶다', '죽고 싶다', '죽고싶다', '죽어버리고 싶다', '죽고 싶어', '살기 싫다', '살기싫다', '살고 싶지 않다', '삶을 끝내고 싶다', '삶을 포기', '자해', '사라지고 싶다', '죽겠다', '죽는 게 낫다'],
     },
     alarm: {
       title: '알람',
@@ -518,6 +562,15 @@ export const translations = {
       bedtimeReminderTitle: 'Hora de dormir 🌙',
       bedtimeReminderBody: '¡Ya es tu hora de dormir sugerida. Que descanses!',
       tonightSession: 'Sesión de esta noche',
+      gettingStarted: {
+        title: '¿Por dónde empezar?',
+        steps: [
+          { emoji: '🌙', label: 'Registrar sueño', sub: 'Toca el botón luna para empezar a registrar tu sueño esta noche' },
+          { emoji: '🎵', label: 'Sonidos', sub: 'Pon sonidos ambientales para ayudarte a dormir' },
+          { emoji: '⏰', label: 'Alarma', sub: 'Configura tu alarma para mantener un horario de sueño regular' },
+        ],
+      },
+      helpBtn: '¿No sabes por dónde empezar?',
     },
     sounds: {
       title: 'Sonidos ambientales',
@@ -648,6 +701,19 @@ export const translations = {
       scoreGreat: 'Excelente',
       scoreOK: 'Regular',
       scoreShort: 'Corto',
+      notes: 'Notas',
+      notesPlaceholder: '¿Cómo dormiste? ¿Tuviste sueños?',
+      crisis: {
+        title: 'No estás solo/a',
+        body: 'Parece que estás pasando por algo muy difícil ahora mismo. Escribirlo ya es un acto de valentía.\n\nSi tienes pensamientos de suicidio o autolesión, por favor comunícate — alguien está listo para escucharte ahora mismo.',
+        lines: [
+          { emoji: '📞', title: 'Línea de la Vida México', sub: '800 911 2000', action: 'tel:8009112000' },
+          { emoji: '💬', title: 'SAPTEL', sub: '55 5259-8121', action: 'tel:5552598121' },
+          { emoji: '🌍', title: 'Find a Helpline', sub: 'findahelpline.com', action: 'https://findahelpline.com' },
+        ],
+        closeBtn: 'Cerrar',
+      },
+      crisisKeywords: ['suicidio', 'suicida', 'matarme', 'terminar con mi vida', 'quitarme la vida', 'no quiero vivir', 'quiero morir', 'sin razón para vivir', 'mejor muerto', 'mejor muerta', 'no puedo más', 'hacerme daño', 'autolesión', 'autolesionarme', 'cortarme', 'sobredosis'],
     },
     alarm: {
       title: 'Alarma',
@@ -759,6 +825,15 @@ export const translations = {
       bedtimeReminderTitle: 'सोने का समय हो गया 🌙',
       bedtimeReminderBody: 'आपका सुझाया गया सोने का समय आ गया है। शुभ स्वप्न!',
       tonightSession: 'आज रात का सत्र',
+      gettingStarted: {
+        title: 'शुरुआत कैसे करें',
+        steps: [
+          { emoji: '🌙', label: 'नींद ट्रैक करें', sub: 'आज रात नींद ट्रैक करने के लिए चाँद बटन दबाएँ' },
+          { emoji: '🎵', label: 'आवाज़ें', sub: 'सोने में मदद के लिए प्राकृतिक आवाज़ें चलाएँ' },
+          { emoji: '⏰', label: 'अलार्म', sub: 'बेहतर नींद के लिए उठने का अलार्म सेट करें' },
+        ],
+      },
+      helpBtn: 'कहाँ जाएँ समझ नहीं आ रहा?',
     },
     sounds: {
       title: 'परिवेश ध्वनियाँ',
@@ -889,6 +964,19 @@ export const translations = {
       scoreGreat: 'बढ़िया',
       scoreOK: 'ठीक',
       scoreShort: 'कम',
+      notes: 'नोट्स',
+      notesPlaceholder: 'नींद कैसी रही? कोई सपने आए?',
+      crisis: {
+        title: 'आप अकेले नहीं हैं',
+        body: 'ऐसा लगता है कि आप अभी कुछ बहुत भारी से गुज़र रहे हैं। यह लिखना साहस का काम है।\n\nअगर आपके मन में आत्महत्या या खुद को नुकसान पहुँचाने के विचार आ रहे हैं, तो कृपया संपर्क करें — कोई अभी सुनने के लिए तैयार है।',
+        lines: [
+          { emoji: '📞', title: 'iCall', sub: '9152987821', action: 'tel:9152987821' },
+          { emoji: '💬', title: 'Vandrevala Foundation', sub: '1860-2662-345', action: 'tel:18602662345' },
+          { emoji: '🌍', title: 'Find a Helpline', sub: 'findahelpline.com', action: 'https://findahelpline.com' },
+        ],
+        closeBtn: 'बंद करें',
+      },
+      crisisKeywords: ['आत्महत्या', 'खुदकुशी', 'मरना चाहता हूँ', 'मरना चाहती हूँ', 'जीना नहीं चाहता', 'जीना नहीं चाहती', 'जिंदगी खत्म करना', 'खुद को नुकसान', 'खुद को चोट', 'आत्मघात', 'गायब हो जाना चाहता हूँ'],
     },
     alarm: {
       title: 'अलार्म',

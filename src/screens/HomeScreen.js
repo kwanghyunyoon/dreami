@@ -10,6 +10,7 @@ import * as Notifications from 'expo-notifications';
 import { colors, typography, spacing, radius, shadow } from '../theme';
 import Card from '../components/Card';
 import { useLanguage } from '../LanguageContext';
+import { useHelp } from '../context/HelpContext';
 import BreathingModal from '../components/BreathingModal';
 import InfoTooltip from '../components/InfoTooltip';
 
@@ -56,6 +57,7 @@ function formatTime(dateStr) {
 
 export default function HomeScreen({ navigation }) {
   const { t } = useLanguage();
+  const { setShowHelp } = useHelp();
   const [isSleeping, setIsSleeping] = useState(false);
   const [sleepStart, setSleepStart] = useState(null);
   const [elapsed, setElapsed] = useState(0);
@@ -241,6 +243,22 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Getting Started Checklist — only shown before first sleep is logged */}
+      {lastSleep === null && !isSleeping && (
+        <Card style={styles.card}>
+          <Text style={styles.sectionLabel}>{t.home.gettingStarted.title}</Text>
+          {t.home.gettingStarted.steps.map((step, i) => (
+            <View key={i} style={[styles.stepRow, i === 0 && styles.stepRowFirst]}>
+              <Text style={styles.stepEmoji}>{step.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepLabel}>{step.label}</Text>
+                <Text style={styles.stepSub}>{step.sub}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
+      )}
+
       {/* Last Sleep Card */}
       {lastSleep && (
         <Card style={styles.card}>
@@ -367,6 +385,15 @@ export default function HomeScreen({ navigation }) {
         </Card>
       </TouchableOpacity>
 
+      {/* Help Button */}
+      <TouchableOpacity
+        style={styles.helpBtn}
+        onPress={() => setShowHelp(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.helpBtnText}>{t.home.helpBtn} ❓</Text>
+      </TouchableOpacity>
+
     </ScrollView>
 
     <BreathingModal
@@ -436,6 +463,25 @@ const styles = StyleSheet.create({
   sessionIcon:     { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   sessionTitle:    { ...typography.body, fontWeight: '600' },
   sessionSub:      { ...typography.caption, marginTop: 2 },
+
+  // Getting started steps
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  stepRowFirst: { borderTopWidth: 0 },
+  stepEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  stepLabel: { ...typography.body, fontWeight: '600' },
+  stepSub: { ...typography.caption, marginTop: 2, lineHeight: 18 },
+
+  // Help button
+  helpBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  helpBtnText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.primary,
+  },
 
   // Smart bedtime suggestion
   suggRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.md },

@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView,
+  ScrollView, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as storage from '../utils/storage';
@@ -10,6 +10,7 @@ import { colors, typography, spacing, radius, shadow } from '../theme';
 import Card from '../components/Card';
 import { useLanguage } from '../LanguageContext';
 import InfoTooltip from '../components/InfoTooltip';
+import CrisisModal from '../components/CrisisModal';
 
 function formatDuration(ms) {
   if (!ms || ms < 60_000) return '—';
@@ -91,6 +92,8 @@ export default function LogScreen() {
   const { t } = useLanguage();
   const [log, setLog] = useState([]);
   const [weekData, setWeekData] = useState([]);
+  const [crisisVisible, setCrisisVisible] = useState(false);
+  const debounceTimers = useRef({});
 
   useFocusEffect(
     useCallback(() => {
@@ -124,11 +127,33 @@ export default function LogScreen() {
     await storage.setItem('sleepLog', JSON.stringify(updated));
   };
 
+  const updateNotes = (index, text) => {
+    // Update state immediately for responsive UI
+    const updated = [...log];
+    updated[index] = { ...updated[index], notes: text };
+    setLog(updated);
+
+    // Crisis keyword detection
+    const keywords = t.log.crisisKeywords || [];
+    if (keywords.some((kw) => text.toLowerCase().includes(kw))) {
+      setCrisisVisible(true);
+    }
+
+    // Debounced save to storage (300ms)
+    if (debounceTimers.current[index]) {
+      clearTimeout(debounceTimers.current[index]);
+    }
+    debounceTimers.current[index] = setTimeout(async () => {
+      await storage.setItem('sleepLog', JSON.stringify(updated));
+    }, 300);
+  };
+
   const avgHours = log.length
     ? (log.reduce((s, e) => s + e.duration, 0) / log.length / 3600000).toFixed(1)
     : null;
 
   return (
+    <View style={styles.screenRoot}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>{t.log.title}</Text>
       <Text style={styles.subtitle}>{t.log.subtitle}</Text>
@@ -208,15 +233,34 @@ export default function LogScreen() {
                 <Text style={styles.qualityLabel}>{t.log.quality}</Text>
                 <QualityStars value={entry.quality || 0} onChange={(q) => updateQuality(i, q)} />
               </View>
+              <View style={styles.notesRow}>
+                <Text style={styles.notesLabel}>{t.log.notes}</Text>
+                <TextInput
+                  style={styles.notesInput}
+                  value={entry.notes || ''}
+                  onChangeText={(text) => updateNotes(i, text)}
+                  placeholder={t.log.notesPlaceholder}
+                  placeholderTextColor={colors.subtext}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
             </Card>
           );
         })
       )}
     </ScrollView>
+    <CrisisModal
+      visible={crisisVisible}
+      onClose={() => setCrisisVisible(false)}
+      t={t}
+    />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenRoot: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: 100 },
   title: { ...typography.h2, marginBottom: 4 },
@@ -248,4 +292,19 @@ const styles = StyleSheet.create({
   entryLabel: { ...typography.caption, marginTop: 2 },
   qualityRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   qualityLabel: { ...typography.caption, fontWeight: '600' },
+
+  notesRow: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, marginTop: spacing.sm },
+  notesLabel: { ...typography.caption, fontWeight: '600', marginBottom: spacing.xs },
+  notesInput: {
+    ...typography.caption,
+    color: colors.text,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 48,
+    textAlignVertical: 'top',
+  },
 });
