@@ -74,8 +74,7 @@ export default {
       eas: {
         projectId: '19a1ecf8-4188-4777-8533-50afe92cab8b',
       },
-      // Update this URL after first Netlify deploy
-      privacyPolicyUrl: 'https://dreami.netlify.app/privacy',
+      privacyPolicyUrl: 'https://dreamiapp1.netlify.app/privacy',
     },
     runtimeVersion: {
       policy: 'appVersion',
