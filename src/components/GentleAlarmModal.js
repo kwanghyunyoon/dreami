@@ -36,6 +36,7 @@ export default function GentleAlarmModal({ visible, rampMinutes = 5, strings, on
   useEffect(() => {
     if (!visible) return;
 
+    let active = true;
     let currentVolume = 0.02;
     const rampSeconds = rampMinutes * 60;
     const increment   = (1.0 - currentVolume) / rampSeconds;
@@ -49,10 +50,16 @@ export default function GentleAlarmModal({ visible, rampMinutes = 5, strings, on
           shouldDuckAndroid: false,
           playThroughEarpieceAndroid: false,
         });
+        if (!active) return;
         const { sound } = await Audio.Sound.createAsync(
           WAKE_SOURCE,
           { isLooping: true, volume: currentVolume, shouldPlay: true },
         );
+        if (!active) {
+          sound.stopAsync().catch(() => {});
+          sound.unloadAsync().catch(() => {});
+          return;
+        }
         soundRef.current = sound;
         setVolume(currentVolume);
 
@@ -75,6 +82,7 @@ export default function GentleAlarmModal({ visible, rampMinutes = 5, strings, on
     start();
 
     return () => {
+      active = false;
       clearInterval(tickRef.current);
       tickRef.current = null;
       if (soundRef.current) {

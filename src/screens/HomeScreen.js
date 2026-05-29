@@ -310,7 +310,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           {/* Goal progress bar */}
           {(() => {
-            const pct = Math.min(lastSleep.duration / (sleepGoal * 3_600_000), 1);
+            const pct = sleepGoal > 0 ? Math.min(lastSleep.duration / (sleepGoal * 3_600_000), 1) : 0;
             const met = pct >= 1;
             const barColor = met ? colors.success : pct >= 0.85 ? colors.warning : colors.primary;
             return (

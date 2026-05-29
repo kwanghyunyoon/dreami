@@ -171,9 +171,9 @@ export default function SoundsScreen() {
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryPill, active && styles.categoryPillActive]}
-              onPress={() => {
+              onPress={async () => {
                 setActiveCategoryId(cat.id);
-                storage.setItem('soundsCategory', cat.id);
+                await storage.setItem('soundsCategory', cat.id);
               }}
               activeOpacity={0.75}
             >
@@ -304,9 +304,9 @@ export default function SoundsScreen() {
           <TouchableOpacity
             key={index}
             style={[styles.timerPill, timerIndex === index && styles.timerPillActive]}
-            onPress={() => {
+            onPress={async () => {
               setTimerIndex(index);
-              storage.setItem('soundsTimer', String(index));
+              await storage.setItem('soundsTimer', String(index));
               if (primaryId || layerId) updateTimer(TIMER_MS[index]);
             }}
           >

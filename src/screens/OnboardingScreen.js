@@ -8,6 +8,7 @@ import {
   Dimensions,
   ScrollView,
   Platform,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,12 +18,20 @@ import { colors, spacing, shadow, typography, radius } from '../theme';
 import * as storage from '../utils/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
+
+const SUPPORT_EMAIL = 'trac3r1885@gmail.com';
+
+function openFeedback() {
+  Linking.openURL(
+    `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Dreami Feedback')}&body=${encodeURIComponent('Hi,\n\nI found an issue:\n\n')}`,
+  );
+}
 
 // ─── Background star positions (stable, derived once) ────────────────────────
 const STARS = Array.from({ length: 18 }, (_, i) => ({
   id: i,
-  x: (7 + i * 53) % 92,   // pseudo-random but deterministic spread
+  x: (7 + i * 53) % 92,
   y: (11 + i * 37) % 85,
   size: i % 3 === 0 ? 4 : i % 3 === 1 ? 3 : 2,
   delay: (i * 200) % 1800,
@@ -71,6 +80,7 @@ function ProgressDots({ step }) {
           style={[
             styles.dot,
             i === step && styles.dotActive,
+            i < step && styles.dotDone,
           ]}
         />
       ))}
@@ -100,6 +110,15 @@ function StepWelcome({ t }) {
       </Animated.Text>
       <Text style={styles.stepTitle}>{t.onboarding.welcome}</Text>
       <Text style={styles.stepBody}>{t.onboarding.tagline}</Text>
+
+      {/* Feature teaser pills */}
+      <View style={styles.teaserRow}>
+        {['🌙 Track', '🎵 Sounds', '⏰ Alarm'].map((label) => (
+          <View key={label} style={styles.teaserPill}>
+            <Text style={styles.teaserText}>{label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -138,7 +157,29 @@ function StepLanguage({ t, lang, setLanguage }) {
   );
 }
 
-// ─── Step 2 — Privacy ─────────────────────────────────────────────────────────
+// ─── Step 2 — Feature Tour ────────────────────────────────────────────────────
+function StepFeatures({ t }) {
+  return (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>{t.onboarding.step3Title}</Text>
+      <View style={styles.featureList}>
+        {t.onboarding.step3Features.map((feature) => (
+          <View key={feature.label} style={styles.featureCard}>
+            <View style={styles.featureIconWrap}>
+              <Ionicons name={`${feature.icon}-outline`} size={24} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.featureLabel}>{feature.label}</Text>
+              <Text style={styles.featureDesc}>{feature.desc}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Step 3 — Privacy ─────────────────────────────────────────────────────────
 function StepPrivacy({ t }) {
   return (
     <View style={styles.stepContent}>
@@ -148,12 +189,12 @@ function StepPrivacy({ t }) {
         color={colors.success}
         style={{ marginBottom: spacing.lg }}
       />
-      <Text style={styles.stepTitle}>{t.onboarding.step3Title}</Text>
+      <Text style={styles.stepTitle}>{t.onboarding.step4Title}</Text>
       <Text style={[styles.stepBody, { marginBottom: spacing.lg }]}>
-        {t.onboarding.step3Body}
+        {t.onboarding.step4Body}
       </Text>
       <View style={styles.bulletList}>
-        {t.onboarding.step3Points.map((point, i) => (
+        {t.onboarding.step4Points.map((point, i) => (
           <View key={i} style={styles.bulletRow}>
             <Ionicons
               name="checkmark-circle"
@@ -169,13 +210,32 @@ function StepPrivacy({ t }) {
   );
 }
 
-// ─── Step 3 — Get Started ─────────────────────────────────────────────────────
+// ─── Step 4 — Get Started ─────────────────────────────────────────────────────
 function StepGetStarted({ t }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.08, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.finalIllustration}>🌙✨⭐️</Text>
-      <Text style={styles.stepTitle}>{t.onboarding.step4Title}</Text>
-      <Text style={styles.stepBody}>{t.onboarding.step4Body}</Text>
+      {/* Mini sleep button preview */}
+      <Animated.View style={[styles.previewBtn, { transform: [{ scale: pulse }] }]}>
+        <Ionicons name="moon-outline" size={36} color={colors.primary} />
+      </Animated.View>
+      <Text style={styles.stepTitle}>{t.onboarding.step5Title}</Text>
+      <Text style={styles.stepBody}>{t.onboarding.step5Body}</Text>
+      <View style={styles.firstActionCard}>
+        <Text style={styles.firstActionLabel}>👆  {t.onboarding.step5Body}</Text>
+      </View>
     </View>
   );
 }
@@ -186,12 +246,10 @@ export default function OnboardingScreen({ onComplete }) {
   const { t, lang, setLanguage } = useLanguage();
   const [step, setStep] = useState(0);
 
-  // Slide / fade animation between steps
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim  = useRef(new Animated.Value(1)).current;
 
   const animateToStep = (nextStep) => {
-    // Fade + slight slide out, then snap to new step, then fade in
     Animated.parallel([
       Animated.timing(fadeAnim,  { toValue: 0, duration: 150, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: -30, duration: 150, useNativeDriver: true }),
@@ -206,15 +264,11 @@ export default function OnboardingScreen({ onComplete }) {
   };
 
   const handleNext = () => {
-    if (step < TOTAL_STEPS - 1) {
-      animateToStep(step + 1);
-    }
+    if (step < TOTAL_STEPS - 1) animateToStep(step + 1);
   };
 
   const handleBack = () => {
-    if (step > 0) {
-      animateToStep(step - 1);
-    }
+    if (step > 0) animateToStep(step - 1);
   };
 
   const handleGetStarted = async () => {
@@ -228,8 +282,9 @@ export default function OnboardingScreen({ onComplete }) {
     switch (step) {
       case 0: return <StepWelcome t={t} />;
       case 1: return <StepLanguage t={t} lang={lang} setLanguage={setLanguage} />;
-      case 2: return <StepPrivacy t={t} />;
-      case 3: return <StepGetStarted t={t} />;
+      case 2: return <StepFeatures t={t} />;
+      case 3: return <StepPrivacy t={t} />;
+      case 4: return <StepGetStarted t={t} />;
       default: return null;
     }
   };
@@ -243,15 +298,18 @@ export default function OnboardingScreen({ onComplete }) {
         ))}
       </View>
 
-      {/* Back button (steps 1-3) */}
+      {/* Top bar: back button left, report link right */}
       <View style={styles.topBar}>
         {step > 0 ? (
           <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={styles.backText}>← {/* back arrow text only */}Back</Text>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
         )}
+        <TouchableOpacity onPress={openFeedback} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.reportLink}>{t.onboarding.reportIssue ?? 'Report an issue'}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Animated step content */}
@@ -298,7 +356,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
-  // Stars
   star: {
     position: 'absolute',
     backgroundColor: colors.primary,
@@ -309,15 +366,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     minHeight: 44,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backBtn: {
-    alignSelf: 'flex-start',
     paddingVertical: spacing.xs,
   },
   backText: {
     ...typography.body,
     color: colors.subtext,
+  },
+  reportLink: {
+    ...typography.caption,
+    color: colors.subtext,
+    textDecorationLine: 'underline',
   },
 
   // Scroll area
@@ -342,7 +405,6 @@ const styles = StyleSheet.create({
     fontSize: 80,
     marginBottom: spacing.xl,
   },
-
   stepTitle: {
     ...typography.h1,
     textAlign: 'center',
@@ -353,6 +415,24 @@ const styles = StyleSheet.create({
     color: colors.subtext,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  teaserRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  teaserPill: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+  },
+  teaserText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
 
   // Step 1 — Language
@@ -407,7 +487,43 @@ const styles = StyleSheet.create({
     right: spacing.xs,
   },
 
-  // Step 2 — Privacy
+  // Step 2 — Feature Tour
+  featureList: {
+    width: '100%',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  featureIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureLabel: {
+    ...typography.body,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  featureDesc: {
+    ...typography.caption,
+    color: colors.subtext,
+    lineHeight: 18,
+  },
+
+  // Step 3 — Privacy
   bulletList: {
     width: '100%',
     gap: spacing.md,
@@ -425,11 +541,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Step 3 — Get Started
-  finalIllustration: {
-    fontSize: 64,
-    letterSpacing: 8,
+  // Step 4 — Get Started
+  previewBtn: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.xl,
+  },
+  firstActionCard: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  firstActionLabel: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
   // Bottom
@@ -458,6 +593,9 @@ const styles = StyleSheet.create({
     height: 9,
     borderRadius: 5,
     backgroundColor: colors.primary,
+  },
+  dotDone: {
+    backgroundColor: colors.primaryMid,
   },
 
   primaryBtn: {

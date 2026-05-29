@@ -7,8 +7,9 @@ import { Audio } from 'expo-av';
  * Both sounds share the same volume level.
  */
 export default function useAudioPlayer() {
-  const refs    = useRef({ primary: null, layer: null });
-  const timerRef = useRef(null);
+  const refs       = useRef({ primary: null, layer: null });
+  const timerRef   = useRef(null);
+  const timerGenRef = useRef(0);
 
   const [primaryId, setPrimaryId] = useState(null);
   const [layerId,   setLayerId]   = useState(null);
@@ -34,6 +35,7 @@ export default function useAudioPlayer() {
 
   const _clearTimer = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    timerGenRef.current += 1;
   };
 
   const _unloadSlot = async (slot) => {
@@ -46,9 +48,11 @@ export default function useAudioPlayer() {
   const _armTimer = (timerMs) => {
     _clearTimer();
     if (timerMs > 0) {
+      const gen = timerGenRef.current;
       timerRef.current = setTimeout(async () => {
         await _unloadSlot('primary');
         await _unloadSlot('layer');
+        if (timerGenRef.current !== gen) return;
         setPrimaryId(null);
         setLayerId(null);
       }, timerMs);

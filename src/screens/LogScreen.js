@@ -243,6 +243,10 @@ export default function LogScreen() {
   const [crisisVisible, setCrisisVisible] = useState(false);
   const debounceTimers = useRef({});
 
+  useEffect(() => {
+    return () => { Object.values(debounceTimers.current).forEach(clearTimeout); };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -280,24 +284,22 @@ export default function LogScreen() {
     await storage.setItem('sleepLog', JSON.stringify(updated));
   };
 
-  const updateNotes = (index, text) => {
-    // Update state immediately for responsive UI
+  const updateNotes = (entryStart, index, text) => {
     const updated = [...log];
     updated[index] = { ...updated[index], notes: text };
     setLog(updated);
 
-    // Crisis keyword detection
     const keywords = t.log.crisisKeywords || [];
     if (keywords.some((kw) => text.toLowerCase().includes(kw))) {
       setCrisisVisible(true);
     }
 
-    // Debounced save to storage (300ms)
-    if (debounceTimers.current[index]) {
-      clearTimeout(debounceTimers.current[index]);
+    if (debounceTimers.current[entryStart]) {
+      clearTimeout(debounceTimers.current[entryStart]);
     }
-    debounceTimers.current[index] = setTimeout(async () => {
+    debounceTimers.current[entryStart] = setTimeout(async () => {
       await storage.setItem('sleepLog', JSON.stringify(updated));
+      delete debounceTimers.current[entryStart];
     }, 300);
   };
 
@@ -391,7 +393,7 @@ export default function LogScreen() {
           <TextInput
             style={styles.notesInput}
             value={entry.notes || ''}
-            onChangeText={(text) => updateNotes(i, text)}
+            onChangeText={(text) => updateNotes(entry.start, i, text)}
             placeholder={t.log.notesPlaceholder}
             placeholderTextColor={colors.subtext}
             multiline
@@ -409,7 +411,7 @@ export default function LogScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       data={log}
-      keyExtractor={(_, i) => String(i)}
+      keyExtractor={(entry) => entry.start}
       renderItem={renderEntry}
       ListHeaderComponent={listHeader}
       ListEmptyComponent={
