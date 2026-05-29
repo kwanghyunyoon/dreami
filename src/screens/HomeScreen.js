@@ -251,6 +251,22 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.date}>{new Date().toLocaleDateString(t.locale, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
       </View>
 
+      {/* Getting Started Checklist — only shown before first sleep is logged */}
+      {lastSleep === null && !isSleeping && (
+        <Card style={styles.card}>
+          <Text style={styles.sectionLabel}>{t.home.gettingStarted.title}</Text>
+          {t.home.gettingStarted.steps.map((step, i) => (
+            <View key={i} style={[styles.stepRow, i === 0 && styles.stepRowFirst]}>
+              <Text style={styles.stepEmoji}>{step.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepLabel}>{step.label}</Text>
+                <Text style={styles.stepSub}>{step.sub}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
+      )}
+
       {/* Main Sleep Button */}
       <View style={styles.buttonWrapper}>
         <Animated.View style={[styles.pulseRing, isSleeping && styles.pulseRingActive, { transform: [{ scale: pulseAnim }] }]} />
@@ -271,22 +287,6 @@ export default function HomeScreen({ navigation }) {
           )}
         </TouchableOpacity>
       </View>
-
-      {/* Getting Started Checklist — only shown before first sleep is logged */}
-      {lastSleep === null && !isSleeping && (
-        <Card style={styles.card}>
-          <Text style={styles.sectionLabel}>{t.home.gettingStarted.title}</Text>
-          {t.home.gettingStarted.steps.map((step, i) => (
-            <View key={i} style={[styles.stepRow, i === 0 && styles.stepRowFirst]}>
-              <Text style={styles.stepEmoji}>{step.emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepLabel}>{step.label}</Text>
-                <Text style={styles.stepSub}>{step.sub}</Text>
-              </View>
-            </View>
-          ))}
-        </Card>
-      )}
 
       {/* Last Sleep Card */}
       {lastSleep && (
